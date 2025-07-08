@@ -19,7 +19,7 @@ const SNAP_INTERVAL = CARD_WIDTH + SPACING;
 const CARD_BORDER_RADIUS = 20; // Match this with your FancyCard's borderRadius
 
 const BrowseModeScreen = ({ route, navigation }) => {
-  const { displayTime, images, collectionName } = route.params;
+  const { displayTime, images, collectionName,music } = route.params;
   const flatListRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -101,7 +101,7 @@ useTVEventHandler((evt) => {
         title={item.title}
         description={item.description}
         onPress={() =>
-        navigation.navigate('DisplayArtWork', { artWork: item })
+        navigation.navigate('DisplayArtWork', { artWork: item,music:music })
         }
       />
     </Animated.View>
@@ -122,30 +122,31 @@ useTVEventHandler((evt) => {
         </View>
       </View>
 
-      <Animated.FlatList
-        ref={flatListRef}
-        data={images}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - SPACING / 2,
-        }}
-        snapToInterval={SNAP_INTERVAL}
-        decelerationRate="fast"
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-     onMomentumScrollEnd={(e) => {
-  const newIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
-  if (newIndex !== currentIndex) {
-    setCurrentIndex(newIndex);
-  }
-}}
-      />
+<Animated.FlatList
+  ref={flatListRef}
+  data={images}
+  keyExtractor={(item) => item.id.toString()}
+  renderItem={renderItem}
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={{
+    paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - SPACING / 2,
+    paddingBottom: 40, // ✅ Add this to avoid clipping on scale
+  }}
+  snapToInterval={SNAP_INTERVAL}
+  decelerationRate="fast"
+  scrollEventThrottle={16}
+  onScroll={Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: true }
+  )}
+  onMomentumScrollEnd={(e) => {
+    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+    if (newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+    }
+  }}
+/>
     </View>
   );
 };

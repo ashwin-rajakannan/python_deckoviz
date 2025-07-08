@@ -401,7 +401,7 @@ export default function CurrentCollection({ route }) {
 
   const handleCardPress = (item) => {
     console.log('HANDLED', item);
-    navigation.navigate('DisplayArtWork', { artWork: item });
+    navigation.navigate('DisplayArtWork', { artWork: item, music:currentCollection.music });
   };
 
   // Show connection status for debugging
@@ -638,13 +638,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   logoContainer: { flexDirection: 'row', alignItems: 'center' },
-  logoBackground: {
-    backgroundColor: 'white',
-    borderRadius: 50,
-    padding: 5,
-    marginRight: 10,
-  },
-  logoImage: { width: 40, height: 40, resizeMode: 'contain' },
+logoBackground: {
+  backgroundColor: 'white',
+  borderRadius: 50,
+  padding: 5, // ← Increase this only if you want more white space around the logo
+  marginRight: 10,
+},
+logoImage: {
+  width: 40,
+  height: 40,
+  resizeMode: 'contain',
+},
   logoText: { color: 'white', fontSize: 24, fontWeight: 'bold' },
   carouselContainer: {
     height: 220,

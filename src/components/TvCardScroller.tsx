@@ -99,6 +99,8 @@ const TVCardScroller = forwardRef(({ hasFocus, CardComponent, onCardPress, onDis
       extrapolate: 'clamp',
     });
 
+
+
     const isArrayData = Array.isArray(data);
 
     return (

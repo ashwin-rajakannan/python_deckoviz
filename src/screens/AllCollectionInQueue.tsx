@@ -664,45 +664,48 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
 buttonsContainer: {
-  position: 'absolute',
- 
-  bottom: 40,
+  marginTop: 10, // <-- Add this for space between cards and buttons
+  marginBottom: 20,
   right: 20,
   flexDirection: 'row',
+  position: 'relative', // optional: better for scrollable layouts than absolute
+  justifyContent: 'flex-end',
 },
-  openAllButton: {
-    backgroundColor: '#683DD8',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    minWidth: 200,
-    marginLeft: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
+
+openAllButton: {
+  backgroundColor: '#683DD8',
+  paddingVertical: 10, // reduced
+  paddingHorizontal: 18, // reduced
+  borderRadius: 20,
+  minWidth: 140, // reduced
+  marginLeft: 10,
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 3,
+  elevation: 5,
+},
   openAllButtonFocused: {
     borderWidth: 3,
     borderColor: '#FFD700',
     backgroundColor: '#7B4AE8',
     transform: [{ scale: 1.05 }],
   },
-  openAllButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+openAllButtonText: {
+  color: 'white',
+  fontSize: 14, // reduced
+  fontWeight: 'bold',
+  textAlign: 'center',
+},
 queueButton: {
-  backgroundColor: '#683DD8', // matched color
-  paddingVertical: 14,
-  paddingHorizontal: 24,
-  borderRadius: 25,
-  minWidth: 180,
+  backgroundColor: '#683DD8',
+  paddingVertical: 10, // reduced
+  paddingHorizontal: 18, // reduced
+  borderRadius: 20,
+  minWidth: 140, // reduced
   alignItems: 'center',
+  marginLeft: 10,
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.3,
@@ -715,12 +718,12 @@ queueButtonFocused: {
   backgroundColor: '#7B4AE8', // consistent with openAllButtonFocused
   transform: [{ scale: 1.05 }],
 },
-  queueButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+ queueButtonText: {
+  color: 'white',
+  fontSize: 14, // reduced
+  fontWeight: 'bold',
+  textAlign: 'center',
+},
   emptyMessageContainer: {
     flex: 1,
     justifyContent: 'center',

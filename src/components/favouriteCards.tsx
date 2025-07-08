@@ -160,10 +160,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+tagsContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  flexShrink: 1,     // ✅ allow shrinking
+  maxWidth: '70%',   // ✅ prevents taking all width
+},
   tagPill: {
     backgroundColor: '#2A2A3E',
   },

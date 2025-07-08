@@ -296,12 +296,13 @@ const QueueArtworkDisplay = ({ navigation }) => {
           onError={() => setImageLoaded(false)}
         >
           {/* Your UI components here - uncomment as needed */}
-       
+          {/* 
+          // BACK BUTTON
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Icon name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
 
-          
+          // INFO
           <View style={styles.infoContainer}>
             <Text style={styles.collectionName}>{currentCollection.name}</Text>
             <Text style={styles.artworkInfo}>
@@ -315,7 +316,7 @@ const QueueArtworkDisplay = ({ navigation }) => {
             )}
           </View>
 
-        
+          // MUSIC + NEXT CONTROLS
           <View style={styles.controlsContainer}>
             {music && (
               <View style={styles.musicControls}>
@@ -345,20 +346,20 @@ const QueueArtworkDisplay = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-       
+          // TIMER
           <View style={styles.timerContainer}>
             <Text style={styles.timerText}>
               {formatTime(remainingTime)}
             </Text>
           </View>
 
-       
+          // ERROR
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-          
+          */}
         </ImageBackground>
       </Animated.View>
     </View>

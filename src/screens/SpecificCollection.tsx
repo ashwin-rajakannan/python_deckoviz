@@ -36,11 +36,11 @@ const SpecificCollection = ({ route }) => {
 
 
   const handleCardPress = (item, index) => {
-    navigation.navigate('DisplayArtWork', { artWork: item });
+    navigation.navigate('DisplayArtWork', { artWork: item,music:currentCollection.music });
   };
 
   const handleDisplayPress = (item, index) => {
-    navigation.navigate('DisplayArtWork', { artWork: item });
+    navigation.navigate('DisplayArtWork', { artWork: item,music:currentCollection.music });
   };
 
  useTVEventHandler((evt) => {
@@ -104,11 +104,13 @@ const SpecificCollection = ({ route }) => {
           id: item.id,
           uri: item.image.file,
           title: item.image.title || `Artwork ${item.id}`,
+          description:item.image.description,
         }));
         navigation.navigate('BrowseModeScreen', {
           displayTime,
           images,
           collectionName: currentCollection.name,
+          music:currentCollection.music
         });
       } else if (focusedButton === 'start') {
         console.log('Navigating to DisplayArtWork');
@@ -203,11 +205,13 @@ const SpecificCollection = ({ route }) => {
                     id: item.id,
                     uri: item.image.file,
                     title: item.image.title || `Artwork ${item.id}`,
+                      description:item.image.description,
                   }));
                   navigation.navigate('BrowseModeScreen', {
                     displayTime,
                     images,
                     collectionName: currentCollection.name,
+                    music:currentCollection.music
                   });
                 }}
               >
@@ -259,7 +263,7 @@ const SpecificCollection = ({ route }) => {
       <TVCardScroller
         ref={tvCardScrollerRef}
         hasFocus={focusOnCards}
-        CardComponent={FavouriteCards}
+        CardComponent={CollectionCards}
         onCardPress={handleCardPress}
         onDisplayPress={handleDisplayPress}
         data={currentCollection}
