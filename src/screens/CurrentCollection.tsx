@@ -21,6 +21,7 @@ import { useActiveCategory } from '../components/context/ActiveCategory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFavorites } from '../components/context/FavouriteCollections';
 import { useCollectionQueue } from '../components/context/CollectionQueue';
+import { useWebSocket } from '../components/context/Websocket'; // Import the WebSocket context
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const scale = SCREEN_WIDTH / 375;
@@ -32,10 +33,8 @@ const FOCUS_ZONES = {
   NAV: 'nav',
   CARDS: 'cards', 
   BUTTON: 'button',
-  HEADER: 'header' // Added header focus zone
+  HEADER: 'header'
 };
-
-
 
 const VerticalNav = ({ 
   navItemRefs, 
@@ -94,53 +93,114 @@ const VerticalNav = ({
   );
 };
 
-export default function CurrentCollection({route}) {
-  const [roomId, setRoomId] = useState(null);
-  const [deviceId, setDeviceId] = useState(null);
-  const [token, setToken] = useState(null);
+export default function CurrentCollection({ route }) {
   const navigation = useNavigation();
   const { activeCategory, setActiveCategory } = useActiveCategory();
   const [likedCards, setLikedCards] = useState([]);
   const navItemRefs = useRef([]);
-  const qrButtonRef = useRef(null); // Ref for QR button
-  const profileButtonRef = useRef(null); // Ref for profile button
+  const qrButtonRef = useRef(null);
+  const profileButtonRef = useRef(null);
 
   // Enhanced focus management
   const [currentFocusZone, setCurrentFocusZone] = useState(FOCUS_ZONES.NAV);
   
-  
   // Add navigation flag to prevent duplicate navigation
-const isNavigatingRef = useRef(false);
-  const [connectionError, setConnectionError] = useState(null);
+  const isNavigatingRef = useRef(false);
   const scrollRef = useRef();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const tvCardScrollerRef = useRef();
-  const webSocketRef = useRef(null);
-  const [currentCollection, setCurrentCollection] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isLoading, setIsLoading] = useState(true);
-  const { setCollectionQueue, collectionQueue } = useCollectionQueue();
   const { favorites } = useFavorites();
-  const [retryCount, setRetryCount] = useState(0);
   const openCollectionButtonRef = useRef();
+
+  // Use WebSocket context instead of managing WebSocket locally
+  const {
+    currentCollection,
+    connectionStatus,
+    connectionError,
+    retryCount,
+    updateConnectionParams,
+    reconnect,
+    roomId,
+    deviceId,
+    token,
+  } = useWebSocket();
+
+  const { setCollectionQueue, collectionQueue } = useCollectionQueue();
 
   const categories = [
     'Current Collection',
     'Permanent Collection On Device',
     'All Collection in Device Queue',
   ];
-  async function getTokens(){
-    const roomId = await AsyncStorage.getItem('roomId')
-    const deviceId =await AsyncStorage.getItem('deviceId')
-    const userToken = await AsyncStorage.getItem('userToken')
 
-    console.log(`room is ${roomId} and  device is ${deviceId} and user is ${userToken}`)
+  // Load connection parameters and update context
+  useEffect(() => {
+    const getParams = async () => {
+      try {
+        const routeRoom = route?.params?.roomId;
+        const routeDevice = route?.params?.deviceId;
+        const routeToken = route?.params?.token;
+
+        const storedRoomId = await AsyncStorage.getItem('roomId');
+        const storedDeviceId = await AsyncStorage.getItem('deviceId');
+        const storedToken = await AsyncStorage.getItem('userToken');
+        
+        console.log('Loaded params:', { storedRoomId, storedDeviceId, storedToken });
+        
+        // Update context with connection parameters
+        updateConnectionParams(
+          routeRoom || storedRoomId,
+          routeDevice || storedDeviceId,
+          routeToken || storedToken
+        );
+      } catch (err) {
+        console.error('Failed to load data from AsyncStorage:', err);
+      }
+    };
+
+    getParams();
+  }, [route?.params]);
+
+  // Handle connection errors and max retries
+  useEffect(() => {
+    if (connectionError && retryCount >= 5) {
+      console.log('Max retries reached, navigating to Home');
+      const timer = setTimeout(() => {
+        navigation.navigate('Home');
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [connectionError, retryCount, navigation]);
+
+  // Update loading state based on current collection
+  useEffect(() => {
+    if (currentCollection?.collection_images?.length > 0) {
+      setIsLoading(false);
+    } else if (connectionStatus === 'connected' && retryCount < 5) {
+      // Only show loading if we're connected but don't have data yet
+      setIsLoading(true);
+    }
+  }, [currentCollection, connectionStatus, retryCount]);
+
+  // Log connection status changes
+  useEffect(() => {
+    console.log('🔗 Connection status:', connectionStatus);
+  }, [connectionStatus]);
+
+  // Debug token information
+  async function getTokens() {
+    const roomId = await AsyncStorage.getItem('roomId');
+    const deviceId = await AsyncStorage.getItem('deviceId');
+    const userToken = await AsyncStorage.getItem('userToken');
+    console.log(`room is ${roomId} and device is ${deviceId} and user is ${userToken}`);
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     getTokens();
-  },[])
+  }, []);
 
   const [randomFavorites, setRandomFavorites] = useState([]);
   
@@ -159,15 +219,7 @@ const isNavigatingRef = useRef(false);
              'https://via.placeholder.com/300',
     }));
   };
-useEffect(() => {
-  if (connectionError && retryCount >= 5) {
-    const timer = setTimeout(() => {
-      navigation.navigate('Home');
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }
-}, [connectionError, retryCount, navigation]);
+
   useEffect(() => {
     const fallbackItems = currentCollection?.collection_images?.slice(0, 2).map((img, i) => ({
       id: `fallback-${i}`,
@@ -180,34 +232,11 @@ useEffect(() => {
       const favs = getTwoUniqueFavoritesWithImages(favorites);
       setRandomFavorites(favs);
     } else if (currentCollection?.collection_images?.length > 0) {
-      const firstTwo = currentCollection.collection_images.slice(0, 2);
       setRandomFavorites(fallbackItems);
     } else {
       setRandomFavorites([]);
     }
   }, [favorites, currentCollection]);
-
-  useEffect(() => {
-    const getParams = async () => {
-      try {
-        const routeRoom = route?.params?.roomId;
-        const routeDevice = route?.params?.deviceId;
-        const routeToken = route?.params?.token;
-
-        const storedRoomId = await AsyncStorage.getItem('roomId');
-        const storedDeviceId = await AsyncStorage.getItem('deviceId');
-        const storedToken = await AsyncStorage.getItem('userToken');
-        console.log('storedss',storedRoomId)
-        setRoomId(routeRoom || storedRoomId);
-        setDeviceId(routeDevice || storedDeviceId);
-        setToken(routeToken || storedToken);
-      } catch (err) {
-        console.error('Failed to load data from AsyncStorage:', err);
-      }
-    };
-
-    getParams();
-  }, []);
 
   useEffect(() => {
     const currentCategoryIndex = categories.indexOf(activeCategory);
@@ -220,259 +249,6 @@ useEffect(() => {
       openCollectionButtonRef.current?.focus?.();
     }
   }, [currentFocusZone, activeCategory]);
-
- useEffect(() => {
-  if (!roomId || !deviceId || !token) {
-    console.warn('Missing required parameters for WebSocket connection');
-    setConnectionStatus('missing_params');
-    return;
-  }
-
-  let reconnectTimeout = null;
-  let heartbeatInterval = null;
-  let isComponentMounted = true;
-
-  const connectWebSocket = () => {
-    if (!isComponentMounted) return;
-
-    try {
-      // Close existing connection if any
-      if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
-        webSocketRef.current.close();
-      }
-
-      setConnectionStatus('connecting');
-      console.log('🔄 Attempting WebSocket connection...');
-      
-      const wsUrl = `wss://api.deckoviz.com/ws/tv/?room=${roomId}&device_id=${deviceId}`;
-      webSocketRef.current = new WebSocket(wsUrl);
-      const ws = webSocketRef.current;
-
-      ws.onopen = () => {
-        if (!isComponentMounted) return;
-        console.log('✅ TV connected to WebSocket');
-        console.log('Socket state:', ws.readyState);
-        setConnectionStatus('connected');
-        setRetryCount(0); // Reset retry count on successful connection
-        
-        // Set up heartbeat to keep connection alive
-        heartbeatInterval = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'ping' }));
-          }
-        }, 30000); // Send ping every 30 seconds
-      };
-
-      ws.onmessage = (event) => {
-        if (!isComponentMounted) return;
-        
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📨 TV received raw data:', data);
-
-          // Handle pong responses
-          if (data.type === 'pong') {
-            console.log('💓 Received heartbeat pong');
-            return;
-          }
-
-          // Process the message based on its structure
-          processWebSocketMessage(data);
-          
-        } catch (parseError) {
-          console.error('❌ Error parsing WebSocket message:', parseError);
-          console.log('Raw message that failed to parse:', event.data);
-        }
-      };
-ws.onerror = (error) => {
-  console.error('❌ TV WebSocket error:', error);
-  setConnectionStatus('error');
-  setConnectionError(error.message || 'WebSocket connection error');
-  
-  // Clear heartbeat on error
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-};
-
-ws.onclose = (event) => {
-  console.log('🔌 TV WebSocket closed:', event.code, event.reason);
-  setConnectionStatus('disconnected');
-  
-  // Set error if not a normal closure
-  if (event.code !== 1000) {
-    setConnectionError(event.reason || 'WebSocket connection closed unexpectedly');
-  }
-  
-  // Clear heartbeat on close
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-
-  // Attempt to reconnect if component is still mounted and it wasn't a clean close
-  if (isComponentMounted && event.code !== 1000 && retryCount < 5) {
-    const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-    console.log(`🔄 Scheduling reconnect in ${backoffDelay}ms (attempt ${retryCount + 1}/5)`);
-    
-    reconnectTimeout = setTimeout(() => {
-      if (isComponentMounted) {
-        setRetryCount(prev => prev + 1);
-        connectWebSocket();
-      }
-    }, backoffDelay);
-  } else if (retryCount >= 5) {
-    // Max retries reached, navigate to Home
-    setConnectionError('Max connection retries reached. Please reconnect.');
-    setTimeout(() => {
-      if (isComponentMounted) {
-        navigation.navigate('Home');
-      }
-    }, 2000);
-  }
-};
-      ws.onclose = (event) => {
-        console.log('🔌 TV WebSocket closed:', event.code, event.reason);
-        setConnectionStatus('disconnected');
-        
-        // Clear heartbeat on close
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval);
-          heartbeatInterval = null;
-        }
-
-        // Attempt to reconnect if component is still mounted and it wasn't a clean close
-        if (isComponentMounted && event.code !== 1000 && retryCount < 5) {
-          const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff, max 10s
-          console.log(`🔄 Scheduling reconnect in ${backoffDelay}ms (attempt ${retryCount + 1}/5)`);
-          
-          reconnectTimeout = setTimeout(() => {
-            if (isComponentMounted) {
-              setRetryCount(prev => prev + 1);
-              connectWebSocket();
-            }
-          }, backoffDelay);
-        }
-      };
-
-    } catch (error) {
-      console.error('❌ WebSocket initialization error:', error);
-      setConnectionStatus('error');
-    }
-  };
-
-  // Helper function to process WebSocket messages with consistent logic
-  const processWebSocketMessage = (data) => {
-    try {
-      // Handle history messages (contains array of past messages)
-      if (data.type === 'history' && Array.isArray(data.messages)) {
-        console.log('📜 Processing history message with', data.messages.length, 'messages');
-        
-        // Process each message in history
-        data.messages.forEach((message, index) => {
-          console.log(`Processing history message ${index + 1}:`, message);
-          processIndividualMessage(message);
-        });
-        return;
-      }
-
-      // Handle direct messages
-      if (data.type === 'message') {
-        processIndividualMessage(data);
-        return;
-      }
-
-      // Handle legacy messages array format
-      if (Array.isArray(data.messages)) {
-        console.log('📜 Processing legacy messages array format');
-        data.messages.forEach((message, index) => {
-          if (message.type === 'message') {
-            console.log(`Processing legacy message ${index + 1}:`, message);
-            processIndividualMessage(message);
-          }
-        });
-        return;
-      }
-
-      // Handle other message types
-      console.log('ℹ️ Received other message type:', data.type);
-      
-    } catch (error) {
-      console.error('❌ Error processing WebSocket message:', error);
-    }
-  };
-
-  
-  // Helper function to process individual messages consistently
-  const processIndividualMessage = (message) => {
-    try {
-      // Handle new format: message.data.data.type === 'collectionQueue'
-      if (message.data?.data?.type === 'collectionQueue') {
-        const payload = message.data.data.payload;
-        console.log('✅ Found collection data (new format):', payload);
-        
-        if (payload.queue) {
-          console.log('🔄 Updating collection queue:', payload.queue);
-          setCollectionQueue(payload.queue);
-        }
-        
-        if (payload.currentCollection) {
-          console.log('🎨 Updating current collection:', payload.currentCollection);
-          setCurrentCollection(payload.currentCollection);
-        }
-        return;
-      }
-
-      // Handle legacy format: message.data.currentcollection
-      if (message.data?.currentcollection) {
-        console.log('✅ Found current collection (legacy format):', message.data.currentcollection);
-        setCurrentCollection(message.data.currentcollection);
-        return;
-      }
-
-      // Handle other data formats
-      if (message.data) {
-        console.log('ℹ️ Received message with unhandled data structure:', message.data);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error processing individual message:', error);
-    }
-  };
-
-  // Initial connection
-  connectWebSocket();
-
-  // Cleanup function
-  return () => {
-    console.log('🧹 Cleaning up WebSocket connection...');
-    isComponentMounted = false;
-    
-    // Clear timers
-    if (reconnectTimeout) {
-      clearTimeout(reconnectTimeout);
-    }
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-    }
-    
-    // Close WebSocket connection
-    if (webSocketRef.current) {
-      const ws = webSocketRef.current;
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        console.log('🔌 Closing WebSocket connection...');
-        ws.close(1000, 'Component unmounted');
-      }
-      webSocketRef.current = null;
-    }
-  };
-}, [roomId, deviceId, token, retryCount]); // Added retryCount to dependencies
-
-// Optional: Add a connection status indicator for debugging
-useEffect(() => {
-  console.log('🔗 Connection status changed to:', connectionStatus);
-}, [connectionStatus]);
 
   const categoryToScreenMap = {
     'Current Collection': 'CurrentCollection',
@@ -505,8 +281,6 @@ useEffect(() => {
         } else if (currentFocusZone === FOCUS_ZONES.NAV && currentCategoryIndex === 0) {
           setCurrentFocusZone(FOCUS_ZONES.HEADER);
           setTimeout(() => qrButtonRef.current?.focus?.(), 50);
-        } else if (currentFocusZone === FOCUS_ZONES.HEADER) {
-          // Already at top, no action
         }
         break;
 
@@ -535,7 +309,6 @@ useEffect(() => {
 
       case 'left':
         if (currentFocusZone === FOCUS_ZONES.HEADER) {
-          // Move between QR and profile buttons
           if (qrButtonRef.current?.isFocused?.()) {
             profileButtonRef.current?.focus?.();
           }
@@ -554,7 +327,6 @@ useEffect(() => {
 
       case 'right':
         if (currentFocusZone === FOCUS_ZONES.HEADER) {
-          // Move between profile and QR buttons
           if (profileButtonRef.current?.isFocused?.()) {
             qrButtonRef.current?.focus?.();
           }
@@ -574,8 +346,6 @@ useEffect(() => {
           isNavigatingRef.current = true;
           if (qrButtonRef.current?.isFocused?.()) {
             navigation.navigate('Home');
-          } else if (profileButtonRef.current?.isFocused?.()) {
-            // Handle profile button press if needed
           }
           setTimeout(() => {
             isNavigatingRef.current = false;
@@ -605,7 +375,7 @@ useEffect(() => {
           }
         } else if (currentFocusZone === FOCUS_ZONES.BUTTON) {
           isNavigatingRef.current = true;
-          navigation.navigate('SpecificCollection', {currentCollection: currentCollection});
+          navigation.navigate('SpecificCollection', { currentCollection: currentCollection });
           setTimeout(() => {
             isNavigatingRef.current = false;
           }, 500);
@@ -616,23 +386,6 @@ useEffect(() => {
         break;
     }
   });
-
-  useEffect(() => {
-    console.log('📦 Collection Queue updated in context');
-  }, [collectionQueue]);
-
-  useEffect(() => {
-    if (currentCollection?.collection_images?.length > 0) {
-      setIsLoading(false);
-    } else if (retryCount < 5) {
-      const timer = setTimeout(() => {
-        console.log('Retrying to load collection...');
-        setRetryCount(prev => prev + 1);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentCollection, retryCount]);
 
   const handleLike = (index) => {
     setLikedCards((prev) =>
@@ -647,15 +400,34 @@ useEffect(() => {
   };
 
   const handleCardPress = (item) => {
-    console.log('HANDLED',item)
+    console.log('HANDLED', item);
     navigation.navigate('DisplayArtWork', { artWork: item });
+  };
+
+  // Show connection status for debugging
+  const renderConnectionStatus = () => {
+  {/*  if (connectionStatus === 'connecting') {
+      return <Text style={styles.statusText}>Connecting...</Text>;
+    } else if (connectionStatus === 'error' || connectionError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Connection Error: {connectionError}</Text>
+          {retryCount < 5 && <Text style={styles.retryText}>Retrying... ({retryCount}/5)</Text>}
+        </View>
+      );
+    } else if (connectionStatus === 'disconnected') {
+      return <Text style={styles.statusText}>Disconnected</Text>;
+    } else if (connectionStatus === 'connected') {
+      return <Text style={styles.connectedText}>Connected</Text>;
+    }
+    return null;*/} 
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
-          <View style={styles.header}>
+        <View style={styles.header}>
           <View style={styles.logoContainer}>
             <View style={styles.logoBackground}>
               <Image source={Logo} style={styles.logoImage} />
@@ -667,7 +439,7 @@ useEffect(() => {
               ref={qrButtonRef}
               style={[
                 styles.headerButton,
-                currentFocusZone === FOCUS_ZONES.HEADER && qrButtonRef.current?.isFocused?.() && styles.headerButtonFocused
+                currentFocusZone === FOCUS_ZONES.HEADER && styles.headerButtonFocused
               ]}
               onPress={() => navigation.navigate('Home')}
               hasTVPreferredFocus={currentFocusZone === FOCUS_ZONES.HEADER}
@@ -682,7 +454,7 @@ useEffect(() => {
               ref={profileButtonRef}
               style={[
                 styles.headerButton,
-                currentFocusZone === FOCUS_ZONES.HEADER && profileButtonRef.current?.isFocused?.() && styles.headerButtonFocused
+                currentFocusZone === FOCUS_ZONES.HEADER && styles.headerButtonFocused
               ]}
               onPress={() => {}}
               tvParallaxProperties={{
@@ -694,6 +466,13 @@ useEffect(() => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Connection Status - Remove in production */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            {renderConnectionStatus()}
+          </View>
+        )}
 
         {/* Carousel */}
         <View style={styles.carouselContainer}>
@@ -755,7 +534,7 @@ useEffect(() => {
 
         {/* Nav + Collection Cards */}
         <View style={styles.navAndFavouritesContainer}>
-   <VerticalNav
+          <VerticalNav
             navItemRefs={navItemRefs}
             hasFocus={currentFocusZone === FOCUS_ZONES.NAV}
             onFocus={setCurrentFocusZone}
@@ -764,20 +543,22 @@ useEffect(() => {
             categories={categories}
             activeCategory={activeCategory}
             setActiveCategory={setActiveCategory}
-            isNavigatingRef={useRef(false)}
+            isNavigatingRef={isNavigatingRef}
           />
           
           {currentCollection?.collection_images?.length > 0 ? (
-         <TVCardScroller
-            ref={tvCardScrollerRef}
-            hasFocus={currentFocusZone === FOCUS_ZONES.CARDS}
-            data={currentCollection}
-            CardComponent={CollectionCards}
-            onCardPress={(item) => console.log(item)}
-          />
+            <TVCardScroller
+              ref={tvCardScrollerRef}
+              hasFocus={currentFocusZone === FOCUS_ZONES.CARDS}
+              data={currentCollection}
+              CardComponent={CollectionCards}
+              onCardPress={handleCardPress}
+            />
           ) : (
             <View style={styles.emptyMessageContainer}>
-              <Text style={styles.emptyMessageText}>No current selection</Text>
+              <Text style={styles.emptyMessageText}>
+                {connectionStatus === 'connecting' ? 'Loading collection...' : 'No current selection'}
+              </Text>
             </View>
           )}
         </View>
@@ -785,20 +566,21 @@ useEffect(() => {
         {/* Open Collection Button */}
         <View style={styles.openAllButtonWrapper}>
           <TouchableOpacity
+            ref={openCollectionButtonRef}
             style={[
               styles.openAllButton,
               currentFocusZone === FOCUS_ZONES.BUTTON && styles.openAllButtonFocused
             ]}
-            onPress={() => navigation.navigate('SpecificCollection',{currentCollection:currentCollection})}
+            onPress={() => navigation.navigate('SpecificCollection', { currentCollection: currentCollection })}
+            hasTVPreferredFocus={currentFocusZone === FOCUS_ZONES.BUTTON}
+            tvParallaxProperties={{
+              enabled: currentFocusZone === FOCUS_ZONES.BUTTON,
+            }}
+            onFocus={() => setCurrentFocusZone(FOCUS_ZONES.BUTTON)}
           >
             <Text style={styles.openAllButtonText}>Open Current Collection</Text>
           </TouchableOpacity>
         </View>
-        
-         
-       {/* <View style={styles.debugContainer}>
-          <Text style={styles.debugText}>Current Focus: {currentFocusZone}</Text>
-        </View>*/}
       </ScrollView>
     </View>
   );
@@ -835,7 +617,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 20,
   },
-   headerIconsContainer: {
+  headerIconsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -864,7 +646,6 @@ const styles = StyleSheet.create({
   },
   logoImage: { width: 40, height: 40, resizeMode: 'contain' },
   logoText: { color: 'white', fontSize: 24, fontWeight: 'bold' },
-  profilePic: { width: 40, height: 40, borderRadius: 20 },
   carouselContainer: {
     height: 220,
     justifyContent: 'center',
@@ -882,13 +663,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   cardImage: { borderRadius: 0 },
-  likeButton: {
-    position: 'absolute',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignSelf: 'flex-end',
-  },
-  liked: { backgroundColor: 'white' },
-  unliked: { backgroundColor: 'rgba(255,255,255,0.2)' },
   cardTextWrapper: {
     position: 'absolute',
     bottom: 50,
@@ -967,15 +741,34 @@ const styles = StyleSheet.create({
   },
   // Debug styles - remove in production
   debugContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
     backgroundColor: 'rgba(0,0,0,0.7)',
     padding: 8,
     borderRadius: 4,
+    marginHorizontal: 16,
+    marginBottom: 10,
   },
-  debugText: {
+  statusText: {
     color: 'yellow',
     fontSize: 12,
+    textAlign: 'center',
+  },
+  connectedText: {
+    color: 'green',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  retryText: {
+    color: 'orange',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
   },
 });

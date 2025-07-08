@@ -11,6 +11,7 @@ import {
 import Sound from 'react-native-sound';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCollectionQueue } from '../components/context/CollectionQueue';
+import { useWebSocket } from '../components/context/Websocket'; // Import WebSocket context
 import Icon from 'react-native-vector-icons/Ionicons';
 
 // Enable audio in silent mode on iOS
@@ -18,6 +19,7 @@ Sound.setCategory('Playback');
 
 const QueueArtworkDisplay = ({ navigation }) => {
   const { collectionQueue, removeFromQueue } = useCollectionQueue();
+  const { sendMessage } = useWebSocket(); // Get sendMessage from WebSocket context
   const [currentCollectionIndex, setCurrentCollectionIndex] = useState(0);
   const [currentArtworkIndex, setCurrentArtworkIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -40,6 +42,40 @@ const QueueArtworkDisplay = ({ navigation }) => {
   const timePerArtwork = currentCollection?.collection_images?.length 
     ? Math.max(1, Math.floor(displayTime / currentCollection.collection_images.length))
     : displayTime;
+
+  // Function to send queue update to mobile app
+  const sendQueueUpdate = (updatedQueue) => {
+    try {
+      const message = {
+        type: 'message',
+        data: {
+          data: {
+            type: 'collectionQueue',
+            payload: {
+              queue: updatedQueue,
+              currentCollection: updatedQueue[0] || null, // Send first collection as current
+              timestamp: Date.now()
+            }
+          }
+        }
+      };
+      
+      const success = sendMessage(message);
+      if (success) {
+        console.log('✅ Queue update sent to mobile app:', updatedQueue.length, 'collections');
+      } else {
+        console.warn('⚠️ Failed to send queue update to mobile app');
+      }
+    } catch (error) {
+      console.error('❌ Error sending queue update:', error);
+    }
+  };
+
+  // Watch for queue changes and send updates
+  useEffect(() => {
+    console.log('📱 Collection queue changed, sending update to mobile app');
+    sendQueueUpdate(collectionQueue);
+  }, [collectionQueue, sendMessage]);
 
   const loadAndPlayMusic = async () => {
     if (!music) return;
@@ -126,46 +162,51 @@ const QueueArtworkDisplay = ({ navigation }) => {
   };
 
   const checkQueueLength = () => {
-  if (collectionQueue.length < 5) {
-    console.log('Queue has less than 5 collections!');
-    // future logic like fetchMoreCollections() can go here
-  }
-};
-const goToNextArtwork = () => {
-  fadeOut();
+    if (collectionQueue.length < 5) {
+      console.log('Queue has less than 5 collections!');
+      // future logic like fetchMoreCollections() can go here
+    }
+  };
 
-  setTimeout(() => {
-    const nextArtworkIndex = currentArtworkIndex + 1;
+  const goToNextArtwork = () => {
+    fadeOut();
 
-    if (nextArtworkIndex < currentCollection.collection_images.length) {
-      setCurrentArtworkIndex(nextArtworkIndex);
-    } else {
-      removeFromQueue(currentCollection.id);
+    setTimeout(() => {
+      const nextArtworkIndex = currentArtworkIndex + 1;
 
-      const updatedQueue = collectionQueue.filter(
-        (item) => item.id !== currentCollection.id
-      );
-
-      checkQueueLength(); // <-- check queue length after removal
-
-      if (updatedQueue.length > 0) {
-        setCurrentCollectionIndex(0);
-        setCurrentArtworkIndex(0);
+      if (nextArtworkIndex < currentCollection.collection_images.length) {
+        setCurrentArtworkIndex(nextArtworkIndex);
       } else {
-        navigation.goBack();
-        return;
+        // Remove collection from queue
+        removeFromQueue(currentCollection.id);
+
+        const updatedQueue = collectionQueue.filter(
+          (item) => item.id !== currentCollection.id
+        );
+
+        checkQueueLength(); // <-- check queue length after removal
+
+        // Send updated queue to mobile app immediately after removal
+        console.log('📱 Sending updated queue after collection removal');
+        sendQueueUpdate(updatedQueue);
+
+        if (updatedQueue.length > 0) {
+          setCurrentCollectionIndex(0);
+          setCurrentArtworkIndex(0);
+        } else {
+          navigation.goBack();
+          return;
+        }
       }
-    }
 
-    setRemainingTime(timePerArtwork);
-    fadeIn();
+      setRemainingTime(timePerArtwork);
+      fadeIn();
 
-    if (nextArtworkIndex >= currentCollection.collection_images.length) {
-      stopMusic();
-    }
-  }, 1000);
-};
-
+      if (nextArtworkIndex >= currentCollection.collection_images.length) {
+        stopMusic();
+      }
+    }, 1000);
+  };
 
   // Manual advance to next artwork
   const skipToNext = () => {
@@ -244,87 +285,86 @@ const goToNextArtwork = () => {
       )}
 
       <Animated.View style={[styles.fullScreenImage, { opacity: fadeAnim }]}>
-  <ImageBackground
-    source={{ uri: currentArtwork?.file || currentArtwork?.external_url }}
-    style={styles.fullScreenImage}
-    resizeMode="contain"
-    onLoad={() => {
-      setImageLoaded(true);
-      fadeIn();
-    }}
-    onError={() => setImageLoaded(false)}
-  >
+        <ImageBackground
+          source={{ uri: currentArtwork?.file || currentArtwork?.external_url }}
+          style={styles.fullScreenImage}
+          resizeMode="contain"
+          onLoad={() => {
+            setImageLoaded(true);
+            fadeIn();
+          }}
+          onError={() => setImageLoaded(false)}
+        >
+          {/* Your UI components here - uncomment as needed */}
+       
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Icon name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
 
-    {/* 
-    // BACK BUTTON
-    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-      <Icon name="arrow-back" size={24} color="white" />
-    </TouchableOpacity>
-
-    // INFO
-    <View style={styles.infoContainer}>
-      <Text style={styles.collectionName}>{currentCollection.name}</Text>
-      <Text style={styles.artworkInfo}>
-        {currentArtworkIndex + 1} of {currentCollection.collection_images.length} • {timePerArtwork}s each
-      </Text>
-      <Text style={styles.artworkTitle}>{currentArtwork?.title}</Text>
-      {currentArtwork?.description && (
-        <Text style={styles.artworkDescription} numberOfLines={2}>
-          {currentArtwork.description}
-        </Text>
-      )}
-    </View>
-
-    // MUSIC + NEXT CONTROLS
-    <View style={styles.controlsContainer}>
-      {music && (
-        <View style={styles.musicControls}>
-          <Text style={styles.musicStatus}>
-            {isPlaying ? 'Now Playing' : isPaused ? 'Paused' : 'Loading...'}
-          </Text>
-          <View style={styles.controlButtons}>
-            {isPlaying ? (
-              <TouchableOpacity onPress={pauseMusic}>
-                <Icon name="pause" size={32} color="white" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={resumeMusic}>
-                <Icon name="play" size={32} color="white" />
-              </TouchableOpacity>
+          
+          <View style={styles.infoContainer}>
+            <Text style={styles.collectionName}>{currentCollection.name}</Text>
+            <Text style={styles.artworkInfo}>
+              {currentArtworkIndex + 1} of {currentCollection.collection_images.length} • {timePerArtwork}s each
+            </Text>
+            <Text style={styles.artworkTitle}>{currentArtwork?.title}</Text>
+            {currentArtwork?.description && (
+              <Text style={styles.artworkDescription} numberOfLines={2}>
+                {currentArtwork.description}
+              </Text>
             )}
-            <TouchableOpacity onPress={stopMusic}>
-              <Icon name="stop" size={32} color="white" />
+          </View>
+
+        
+          <View style={styles.controlsContainer}>
+            {music && (
+              <View style={styles.musicControls}>
+                <Text style={styles.musicStatus}>
+                  {isPlaying ? 'Now Playing' : isPaused ? 'Paused' : 'Loading...'}
+                </Text>
+                <View style={styles.controlButtons}>
+                  {isPlaying ? (
+                    <TouchableOpacity onPress={pauseMusic}>
+                      <Icon name="pause" size={32} color="white" />
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={resumeMusic}>
+                      <Icon name="play" size={32} color="white" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={stopMusic}>
+                    <Icon name="stop" size={32} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.nextButton} onPress={skipToNext}>
+              <Icon name="play-skip-forward" size={32} color="white" />
+              <Text style={styles.nextButtonText}>Next</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
 
-      <TouchableOpacity style={styles.nextButton} onPress={skipToNext}>
-        <Icon name="play-skip-forward" size={32} color="white" />
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
-    </View>
+       
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>
+              {formatTime(remainingTime)}
+            </Text>
+          </View>
 
-    // TIMER
-    <View style={styles.timerContainer}>
-      <Text style={styles.timerText}>
-        {formatTime(remainingTime)}
-      </Text>
-    </View>
-
-    // ERROR
-    {error && (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    )}
-    */}
-
-  </ImageBackground>
-</Animated.View>
+       
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+          
+        </ImageBackground>
+      </Animated.View>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
