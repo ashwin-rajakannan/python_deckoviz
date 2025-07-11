@@ -96,41 +96,42 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   // Helper function to process individual messages consistently
-  const processIndividualMessage = (message) => {
-    try {
-      // Handle new format: message.data.data.type === 'collectionQueue'
-      if (message.data?.data?.type === 'collectionQueue') {
-        const payload = message.data.data.payload;
-        console.log('✅ Found collection data (new format):', payload);
-        
-        if (payload.queue) {
-          console.log('🔄 Updating collection queue:', payload.queue);
-          setCollectionQueue(payload.queue);
-        }
-        
-        if (payload.currentCollection) {
-          console.log('🎨 Updating current collection:', payload.currentCollection);
-          setCurrentCollection(payload.currentCollection);
-        }
-        return;
-      }
-
-      // Handle legacy format: message.data.currentcollection
-      if (message.data?.currentcollection) {
-        console.log('✅ Found current collection (legacy format):', message.data.currentcollection);
-        setCurrentCollection(message.data.currentcollection);
-        return;
-      }
-
-      // Handle other data formats
-      if (message.data) {
-        console.log('ℹ️ Received message with unhandled data structure:', message.data);
+ const processIndividualMessage = (message) => {
+  try {
+    // Handle new format: message.data.data.type === 'collectionQueue'
+    if (message.data?.data?.type === 'collectionQueue') {
+      const payload = message.data.data.payload;
+      console.log('✅ Found collection data (new format):', payload);
+      
+      if (payload.queue) {
+        console.log('🔄 Updating collection queue:', payload.queue);
+        setCollectionQueue(payload.queue);
       }
       
-    } catch (error) {
-      console.error('❌ Error processing individual message:', error);
+      // Fix: Handle currentCollection even when it's null
+      if (payload.hasOwnProperty('currentCollection')) {
+        console.log('🎨 Updating current collection:', payload.currentCollection);
+        setCurrentCollection(payload.currentCollection || null); // Explicitly handle null
+      }
+      return;
     }
-  };
+
+    // Handle legacy format: message.data.currentcollection
+    if (message.data?.currentcollection) {
+      console.log('✅ Found current collection (legacy format):', message.data.currentcollection);
+      setCurrentCollection(message.data.currentcollection);
+      return;
+    }
+
+    // Handle other data formats
+    if (message.data) {
+      console.log('ℹ️ Received message with unhandled data structure:', message.data);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing individual message:', error);
+  }
+};
 
   // WebSocket connection effect
   useEffect(() => {
