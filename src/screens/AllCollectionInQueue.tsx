@@ -98,7 +98,7 @@ export default function AllCollectionInQueue() {
   const tvCardScrollerRef = useRef();
   const openAllButtonRef = useRef();
   const startQueueButtonRef = useRef();
-  const { collectionQueue } = useCollectionQueue();
+  const { collectionQueue ,startQueue} = useCollectionQueue();
   const { favorites } = useFavorites();
   const [isInitialized, setIsInitialized] = useState(false);
   const lastEventTime = useRef(0);
@@ -215,11 +215,12 @@ export default function AllCollectionInQueue() {
     handleNavigation('AllQueueCollection', { collectionQueue });
   };
 
-  const handleStartQueuePress = () => {
-    if (isNavigatingRef.current || !collectionQueue?.length) return;
-    handleNavigation('QueueArtworkDisplay', { collectionQueue });
-  };
-
+// In AllCollectionInQueue.js
+const handleStartQueuePress = () => {
+  if (isNavigatingRef.current || !collectionQueue?.length) return;
+  startQueue(); // Call this before navigation
+  handleNavigation('QueueArtworkDisplay', { collectionQueue });
+};
   useTVEventHandler((evt) => {
     if (isLoading || isNavigatingRef.current) return;
     

@@ -553,6 +553,7 @@ export default function CurrentCollection({ route }) {
               data={currentCollection}
               CardComponent={CollectionCards}
               onCardPress={handleCardPress}
+              tagData={currentCollection.tags}
             />
           ) : (
             <View style={styles.emptyMessageContainer}>

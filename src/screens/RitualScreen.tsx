@@ -12,23 +12,20 @@ import {
 import Sound from 'react-native-sound';
 import { useFocusEffect } from '@react-navigation/native';
 import { useWebSocket } from '../components/context/Websocket';
-
-// Enable audio in silent mode on iOS
+import { CommonActions } from '@react-navigation/native'; // already imported
 Sound.setCategory('Playback');
 
-const DisplayArtwork = ({ route, navigation }) => {
+const DisplayRitualScreen = ({ route, navigation }) => {
   const { 
     artWork,
     collection_images,
     display_time = 0,
     music,
-    isRitual = false,
     ritualName = '',
     triggerTime = null
   } = route.params || {};
 
   const { completeRitual, isRitualPlaying } = useWebSocket();
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -39,36 +36,20 @@ const DisplayArtwork = ({ route, navigation }) => {
   const timerRef = useRef(null);
   const soundRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const displayTimerRef = useRef(null); // For overall display time
-
-  useEffect(() => {
-    console.log('🧩 DisplayArtwork Mounted', { isRitual, ritualName, triggerTime });
-    return () => console.log('🧩 DisplayArtwork Unmounted');
-  }, []);
+  const displayTimerRef = useRef(null);
 
   const isCollectionMode = collection_images && collection_images.length > 0;
-
-  // Handle different time units: rituals pass seconds, normal collections pass minutes
-  const displayTimeInSeconds = isRitual ? display_time : display_time * 60;
-  
   const timePerImage = isCollectionMode 
-    ? Math.round(displayTimeInSeconds / collection_images.length) 
+    ? Math.round(display_time / collection_images.length) 
     : 0;
-
-  // Add debugging logs
-  console.log('DisplayArtwork Debug:', {
-    display_time,
-    displayTimeInSeconds,
-    isCollectionMode,
-    collection_images_length: collection_images?.length,
-    timePerImage,
-    isRitual,
-    ritualName
-  });
-
   const currentArtwork = isCollectionMode 
     ? collection_images[currentIndex]?.image 
     : artWork?.image;
+
+  useEffect(() => {
+    console.log('🧙‍♂️ DisplayRitualScreen Mounted', { ritualName, triggerTime });
+    return () => console.log('🧙‍♂️ DisplayRitualScreen Unmounted');
+  }, []);
 
   const loadAndPlayMusic = async () => {
     if (!music) return;
@@ -109,8 +90,6 @@ const DisplayArtwork = ({ route, navigation }) => {
         soundRef.current = null;
         setIsPlaying(false);
       });
-    } else {
-      soundRef.current = null;
     }
   };
 
@@ -123,48 +102,44 @@ const DisplayArtwork = ({ route, navigation }) => {
     }).start();
   };
 
-  const handleDisplayComplete = () => {
-    stopMusic();
-    
-    if (isRitual) {
-      // Complete ritual and let WebSocket provider handle navigation
-      completeRitual();
-    } else {
-      // Normal navigation back
-      navigation.goBack();
-    }
-  };
+const handleRitualComplete = () => {
+  stopMusic();
+  completeRitual();
 
-  const handleBack = () => {
-    if (isRitual) {
-      // For rituals, complete the ritual process
-      completeRitual();
-    } else {
-      // Normal back navigation
-      stopMusic();
-      navigation.goBack();
-    }
-  };
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: 'CurrentCollection' }],
+    })
+  );
+};
 
-  // Handle hardware back button for rituals
+const handleBack = () => {
+  stopMusic();
+  completeRitual();
+
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: 'CurrentCollection' }],
+    })
+  );
+};
+
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isRitual) {
-        // Prevent back button during ritual or handle it gracefully
-        return true; // Consume the back press
-      }
-      return false; // Allow normal back behavior
+      handleBack();
+      return true;
     });
 
     return () => backHandler.remove();
-  }, [isRitual]);
+  }, []);
 
   useEffect(() => {
     if (isCollectionMode) {
       setRemainingTime(timePerImage);
-    } else if (display_time > 0) {
-      // Use the converted displayTimeInSeconds
-      setRemainingTime(displayTimeInSeconds);
+    } else {
+      setRemainingTime(display_time);
     }
 
     if (music) {
@@ -173,24 +148,19 @@ const DisplayArtwork = ({ route, navigation }) => {
 
     fadeIn();
 
-    // Set up overall display timer using displayTimeInSeconds
     if (display_time > 0) {
       displayTimerRef.current = setTimeout(() => {
-        console.log('🎯 Display time completed');
-        handleDisplayComplete();
-      }, displayTimeInSeconds * 1000); // displayTimeInSeconds is already in seconds
+        console.log('🎆 Ritual display time completed');
+        handleRitualComplete();
+      }, display_time * 1000);
     }
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (displayTimerRef.current) {
-        clearTimeout(displayTimerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
       stopMusic();
     };
-  }, [music, display_time, displayTimeInSeconds]);
+  }, [music, display_time]);
 
   useEffect(() => {
     if (!isCollectionMode || collection_images.length <= 1) return;
@@ -212,15 +182,14 @@ const DisplayArtwork = ({ route, navigation }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log(`🎨 DisplayArtwork focused - isRitual: ${isRitual}, ritualName: ${ritualName}`);
-      
+      console.log(`✨ DisplayRitualScreen focused - ${ritualName}`);
       return () => {
-        console.log(`🎨 DisplayArtwork unfocused`);
+        console.log(`✨ DisplayRitualScreen unfocused`);
         stopMusic();
         if (timerRef.current) clearInterval(timerRef.current);
         if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
       };
-    }, [isRitual, ritualName])
+    }, [ritualName])
   );
 
   const formatTime = (seconds) => {
@@ -234,9 +203,7 @@ const DisplayArtwork = ({ route, navigation }) => {
       {!imageLoaded && (
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>
-            {isRitual ? `Ritual: ${ritualName}` : 
-             isCollectionMode ? 'Collection Slideshow' : 
-             artWork?.title || 'Artwork'}
+            Ritual: {ritualName}
           </Text>
         </View>
       )}
@@ -252,55 +219,35 @@ const DisplayArtwork = ({ route, navigation }) => {
           }}
           onError={() => setImageLoaded(false)}
         >
-          {/* Back button - only show for non-rituals or add ritual-specific handling */}
-          {isRitual && (
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
 
-          {/* Ritual indicator */}
-          {isRitual && (
-            <View style={styles.ritualIndicator}>
-              <Text style={styles.ritualText}>
-                ✨ {ritualName}
-              </Text>
-            </View>
-          )}
+          <View style={styles.ritualIndicator}>
+            <Text style={styles.ritualText}>
+              ✨ {ritualName}
+            </Text>
+          </View>
 
-          {/* Collection info 
           {isCollectionMode && (
             <View style={styles.collectionInfo}>
               <Text style={styles.collectionText}>
                 {currentIndex + 1} of {collection_images.length}
               </Text>
             </View>
-          )}*/}
+          )}
 
-          {/* Music status 
-          {music && (
-            <View style={styles.musicStatus}>
-              <Text style={styles.musicStatusText}>
-                {isPlaying ? '🎵 Music Playing' : '🔇 Music Paused'}
-              </Text>
-            </View>
-          )}*/}
-
-          {/* Error message */}
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
-          {/* Timer 
-          {(display_time > 0 || isCollectionMode) && (
-            <View style={styles.timerContainer}>
-              <Text style={styles.timerText}>
-                {formatTime(remainingTime)}
-              </Text>
-            </View>
-          )}*/}
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>
+              {formatTime(remainingTime)}
+            </Text>
+          </View>
         </ImageBackground>
       </Animated.View>
     </View>
@@ -396,21 +343,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
-  musicStatus: {
-    position: 'absolute',
-    bottom: 40,
-    left: '50%',
-    transform: [{ translateX: -50 }],
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  musicStatusText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   errorContainer: {
     position: 'absolute',
     bottom: 100,
@@ -428,4 +360,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default DisplayArtwork;
+export default DisplayRitualScreen;

@@ -15,7 +15,7 @@ const CARD_WIDTH = SCREEN_WIDTH * 0.3;
 const SPACING = 16;
 const SNAP_INTERVAL = CARD_WIDTH + SPACING;
 
-const TVCardScroller = forwardRef(({ hasFocus, CardComponent, onCardPress, onDisplayPress, cardType, data }, ref) => {
+const TVCardScroller = forwardRef(({ hasFocus, CardComponent, onCardPress, onDisplayPress, cardType, data ,tagData}, ref) => {
   const tags = data?.tags;
   const DATA = Array.isArray(data) ? data : data?.collection_images || [];
   
@@ -24,9 +24,6 @@ const TVCardScroller = forwardRef(({ hasFocus, CardComponent, onCardPress, onDis
   const [currentIndex, setCurrentIndex] = useState(0); // Start from 0 instead of 1
   const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    console.log('Tagsss', data);
-  }, [data]);
 
   const scrollToIndex = (index) => {
     if (index >= 0 && index < DATA.length && flatListRef.current) {
@@ -128,7 +125,7 @@ const TVCardScroller = forwardRef(({ hasFocus, CardComponent, onCardPress, onDis
             focused={hasFocus && index === currentIndex}
             onDisplayPress={() => onDisplayPress?.(item, index)}
             cardType={cardType}
-            tags={isArrayData ? item.tags : data.tags}
+            tags={isArrayData ? tagData || item.tags : data.tags}
             data={
               isArrayData
                 ? item

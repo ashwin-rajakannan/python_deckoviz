@@ -1,11 +1,16 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const CollectionQueueContext = createContext();
 
 export const CollectionQueueProvider = ({ children }) => {
   const [collectionQueue, setCollectionQueue] = useState([]);
   const [currentCollection, setCurrentCollection] = useState(null);
+  const [isQueuePlaying, setIsQueuePlaying] = useState(false); // Add this line
 
+  
+    useEffect(()=>{
+      console.log('Changed queue playing' , isQueuePlaying)
+    },[isQueuePlaying])
   // Collection Queue methods
   const updateCollectionQueue = (newQueue) => {
     setCollectionQueue(newQueue);
@@ -19,6 +24,14 @@ export const CollectionQueueProvider = ({ children }) => {
     setCollectionQueue((prev) => prev.filter(c => c.id !== collectionId));
   };
 
+  // Add to CollectionQueueContext.js
+const insertAtIndex = (collection, index = 0) => {
+  setCollectionQueue(prev => {
+    const newQueue = [...prev];
+    newQueue.splice(index, 0, collection);
+    return newQueue;
+  });
+};
   const clearQueue = () => {
     setCollectionQueue([]);
   };
@@ -43,6 +56,16 @@ export const CollectionQueueProvider = ({ children }) => {
     return null;
   };
 
+
+    // Add these new methods
+  const startQueue = () => {
+    setIsQueuePlaying(true);
+  };
+
+  const stopQueue = () => {
+    setIsQueuePlaying(false);
+  };
+
   return (
     <CollectionQueueContext.Provider
       value={{
@@ -52,7 +75,10 @@ export const CollectionQueueProvider = ({ children }) => {
         addToQueue,
         removeFromQueue,
         clearQueue,
-        
+        insertAtIndex,
+        isQueuePlaying,
+        startQueue, // Add this
+        stopQueue, // Add this
         // Current collection state and methods
         currentCollection,
         setCurrentCollection: updateCurrentCollection,

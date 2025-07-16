@@ -17,9 +17,6 @@ const CollectionCards = ({
   const scale = width / 400;
   const [parsedTag,setParsedTag] = useState([])
 
-  useEffect(()=>{
-    console.log('thisdatassss',data)
-  },[data])
   return (  
     <View style={[styles.card, { width, height }]}>
    <Image
@@ -52,7 +49,7 @@ const CollectionCards = ({
 
         <View style={styles.tagsRow}>
           <View style={[styles.tagsContainer, { gap: 8 * scale }]}>
-            {['Awesome','Amazing']?.map((tag) => (
+            {JSON.parse(tags)?.map((tag) => (
               <View key={tag} style={[styles.tagPill, {
                 paddingHorizontal: 12 * scale,
                 paddingVertical: 6 * scale,

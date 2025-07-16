@@ -214,7 +214,7 @@ const QueueArtworkDisplay = ({ navigation }) => {
     goToNextArtwork();
   };
 
-  useEffect(() => {
+  useEffect(() => { 
     if (!currentCollection) {
       navigation.goBack();
       return;
@@ -295,8 +295,8 @@ const QueueArtworkDisplay = ({ navigation }) => {
           }}
           onError={() => setImageLoaded(false)}
         >
-          {/* Your UI components here - uncomment as needed */}
-          {/* 
+          {/* Your UI components here - uncomment as needed 
+        
           // BACK BUTTON
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Icon name="arrow-back" size={24} color="white" />
@@ -358,8 +358,8 @@ const QueueArtworkDisplay = ({ navigation }) => {
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          )}
-          */}
+          )}*/}
+         
         </ImageBackground>
       </Animated.View>
     </View>
