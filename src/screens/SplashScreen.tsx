@@ -114,13 +114,12 @@ const App = ({ navigation }) => {
     <Svg height={height} width={width} style={styles.backgroundSvg}>
       <Defs>
       <LinearGradient
-  id="backgroundGradient"
-  x1="0%"
-  y1="0%"
-  x2="100%"
-  y2="100%"
->
-
+        id="backgroundGradient"
+        x1="0%"
+        y1="0%"
+        x2="100%"
+        y2="100%"
+      >
           <Stop offset="0%" stopColor="#6a11cb" />
           <Stop offset="25%" stopColor="#2575fc" />
           <Stop offset="50%" stopColor="#ff00cc" />
@@ -226,6 +225,7 @@ const styles = StyleSheet.create({
   tvContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 40, // Added padding to provide more space at the top
   },
   tvFrame: {
     width: width * 0.7,

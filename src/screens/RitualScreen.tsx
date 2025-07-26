@@ -219,9 +219,9 @@ const handleBack = () => {
           }}
           onError={() => setImageLoaded(false)}
         >
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        {/**  <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <View style={styles.ritualIndicator}>
             <Text style={styles.ritualText}>
@@ -229,25 +229,25 @@ const handleBack = () => {
             </Text>
           </View>
 
-          {isCollectionMode && (
+        {/**  {isCollectionMode && (
             <View style={styles.collectionInfo}>
               <Text style={styles.collectionText}>
                 {currentIndex + 1} of {collection_images.length}
               </Text>
             </View>
-          )}
+          )}*/} 
 
-          {error && (
+       {/*    {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          )}
+          )}*/} 
 
-          <View style={styles.timerContainer}>
+      {/*     <View style={styles.timerContainer}>
             <Text style={styles.timerText}>
               {formatTime(remainingTime)}
             </Text>
-          </View>
+          </View>*/} 
         </ImageBackground>
       </Animated.View>
     </View>
