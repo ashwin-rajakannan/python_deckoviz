@@ -18,7 +18,7 @@ export const useGameWebSocket = () => {
         if (!groupId) return;
 
         // Determine WS URL based on API URL
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://auth.deckoviz.com';
         const wsProtocol = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
         // Remove protocol to get host
         const host = apiUrl.replace(/^https?:\/\//, '');

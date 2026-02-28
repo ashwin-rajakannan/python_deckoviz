@@ -41,7 +41,7 @@ export const PremiumGameLayout: React.FC<PremiumGameLayoutProps> = ({
         const msg = chatInput.trim();
         setChatInput("");
         try {
-            const apiBase = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/games/${gameSlug}` : `http://localhost:8000/games/${gameSlug}`;
+            const apiBase = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/games/${gameSlug}` : `https://auth.deckoviz.com/games/${gameSlug}`;
             await axios.post(`${apiBase}/chat`, {
                 session_id: sessionId,
                 user_id: userId,
