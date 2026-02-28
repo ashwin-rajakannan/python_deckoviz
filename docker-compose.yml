@@ -1,57 +1,42 @@
+version: '3.8'
 services:
-  elinity_common:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    image: elinity_common:latest
-    container_name: elinity_common
-    ports:
-      - "8081:8081"   # FastAPI
-      - "7862:7862"   # Voice Onboarding (Gradio)
+  db:
+    image: postgres:15
+    container_name: elinity-db-final
+    restart: always
     environment:
-      - PYTHONPATH=/app
-    command: >
-      sh -c "uvicorn main:app --host 0.0.0.0 --port 8081 & python api/routers/voice_onboarding.py"
-    networks:
-      - elinity_common_default
+      POSTGRES_USER: elinity_user
+      POSTGRES_PASSWORD: Deckoviz_prod_2026
+      POSTGRES_DB: elinity_db
+    ports:
+      - "5440:5432"
     volumes:
-      - ./keys/firebase.json:/app/keys/firebase.json:ro
-      - ./:/app
+      - elinity_safe_data:/var/lib/postgresql/data
 
-  celery_worker_elinity:
-    container_name: elinity_celery_worker
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    image: celery_worker:latest
-    command: celery -A core.celery.celery_app worker --loglevel=info
+  redis:
+    image: redis:7-alpine
+    container_name: elinity-redis-final
+    restart: always
+    ports:
+      - "6390:6379"
+
+  elinity-app:
+    build: .
+    container_name: elinity-app-final
+    restart: always
+    ports:
+      - "8090:8081"
+    env_file: .env
+    environment:
+      - DB_URL=postgresql://elinity_user:Deckoviz_prod_2026@db:5432/elinity_db
+      - REDIS_URL=redis://redis:6379/0
+      - DB_HOST=db
+      - REDIS_HOST=redis
+      - DB_SSL_MODE=disable
+    command: uvicorn main:app --host 0.0.0.0 --port 8081
     depends_on:
-      - elinity_common
-    networks:
-      - elinity_common_default
-    volumes:
-      - ./:/app
+      - db
+      - redis
 
-  celery_beat_elinity:
-    container_name: elinity_celery_beat
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    image: celery_beat:latest
-    command: celery -A core.celery.celery_app beat --loglevel=info
-    depends_on:
-      - elinity_common
-    networks:
-      - elinity_common_default
-    volumes:
-      - ./:/app
-
-networks:
-  elinity_common_default:
-    driver: bridge
+volumes:
+  elinity_safe_data:
