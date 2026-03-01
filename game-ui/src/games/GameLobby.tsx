@@ -7,6 +7,8 @@ import {
     BookOpen, Globe, Layers, Image, Scale, Sword, Compass, Mic2, Hexagon, Scroll, Play, Sparkles, LogOut, User, Users, Clock, Gamepad2
 } from 'lucide-react';
 import { PremiumButton, PremiumCard } from '../components/shared/PremiumComponents';
+import { createCollection } from '../api/collections';
+import { streamingManager } from '../api/streaming';
 
 // Fallback icon map
 const IconMap: any = {
@@ -98,6 +100,18 @@ export const GameLobby = () => {
         setGameSession(game.session_id, game.session_id, game.game_slug, {}, game.room_code, game.status);
     };
 
+    const handleCreateDemoCollection = async () => {
+        try {
+            setLoading(true);
+            const result = await createCollection("Demo " + Date.now(), "Test");
+            alert("Collection created: " + result.name);
+        } catch (err) {
+            alert("Failed to create collection");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto px-6 pb-20 relative">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
@@ -130,6 +144,8 @@ export const GameLobby = () => {
                         <LogOut size={14} />
                         LOGOUT
                     </button>
+                    <button onClick={handleCreateDemoCollection} className="ml-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg" disabled={loading}>+ COLLECTION</button>
+                    <button onClick={() => alert("Streaming soon")} className="ml-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg">STREAM</button>
                 </div>
 
                 <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md w-full md:w-auto">

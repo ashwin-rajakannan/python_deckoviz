@@ -91,7 +91,7 @@ export const StoryWeaverView = () => {
                             <div className="mt-16 pt-10 border-t border-white/5">
                                 <span className="text-[10px] text-white/20 uppercase tracking-[0.3em] mb-6 block text-center font-bold">PREVIOUS ENTRIES</span>
                                 <div className="space-y-6">
-                                    {gameState.story_text.slice(-4, -1).map((text, idx) => (
+                                    {gameState.story_text.slice(-4, -1).map((text: string, idx: number) => (
                                         <motion.p
                                             key={idx}
                                             initial={{ opacity: 0 }}
