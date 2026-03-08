@@ -12,10 +12,10 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, De
 from ..schemas.qr_code import GenerateQRRequest, GenerateQRResponse, PairingRequest, PairingResponse
 from ..utils.qr_code import TVQRCodeGenerator
 from ..utils.token import get_current_user,create_access_token
-from ..utils.qr_redis import QRRedisManager
-from ..databases.configs import get_redis_client
-from ..utils.websocket_manager import manager
-from ..utils.json_helpers import safe_parse_json
+from utils.qr_redis import QRRedisManager
+from databases.configs import get_redis_client
+from utils.websocket_manager import manager
+from utils.json_helpers import safe_parse_json
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)

@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # app.py
 from fastapi import FastAPI, Depends
 import logging
@@ -13,8 +16,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from .routers import  websocket, rooms, qr_code_redis, curations, curations
-from databases.configs import get_redis_client
-from middleware.logging import RequestLoggingMiddleware
+from .databases.configs import get_redis_client
+from .middleware.logging import RequestLoggingMiddleware
 
 # Initialize the application
 app = FastAPI()
