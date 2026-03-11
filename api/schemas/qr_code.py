@@ -10,7 +10,7 @@ class PairingResponse(BaseModel):
     message: str
     
 class GenerateQRRequest(BaseModel):
-    api_base_url: str = Field(default="http://0.0.0.0:8000", description="Base URL of the API")
+    api_base_url: str = Field(default="https://api.deckoviz.com", description="Base URL of the API")
     instructions: str = Field("Scan to connect your mobile app", description="Instructions text on the QR code")
     
 class GenerateQRResponse(BaseModel):

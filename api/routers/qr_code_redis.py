@@ -8,7 +8,8 @@ import uuid
 import logging
 import json
 from typing import Dict, Any, List, Optional, Set
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
+from fastapi import Request, APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
+from fastapi import Request
 from ..schemas.qr_code import GenerateQRRequest, GenerateQRResponse, PairingRequest, PairingResponse
 from ..utils.qr_code import TVQRCodeGenerator
 from ..utils.token import get_current_user,create_access_token
@@ -38,7 +39,12 @@ def get_qr_redis_manager():
 
 # API Endpoints
 @router.post("/qr/generate-qr", response_model=GenerateQRResponse)
-async def generate_pairing_qr(request: GenerateQRRequest, redis_manager: QRRedisManager = Depends(get_qr_redis_manager)):
+async def generate_pairing_qr(request: GenerateQRRequest, fastapi_request: Request, redis_manager: QRRedisManager = Depends(get_qr_redis_manager)):
+    logging.getLogger("qr_code_redis_router").info("LOG: generate_pairing_qr called")
+    body = await fastapi_request.body()
+    logging.getLogger("qr_code_redis_router").info(f"RAW BODY: {body}")
+    logging.getLogger("qr_code_redis_router").info(f"HEADERS: {dict(fastapi_request.headers)}")
+    body = await fastapi_request.body(); logging.getLogger("qr_code_redis_router").info(f"RAW BODY: {body}"); logging.getLogger("qr_code_redis_router").info(f"HEADERS: {dict(fastapi_request.headers)}")
     """
     Generate a QR code for TV-Mobile app pairing with room ID transfer.
     This endpoint is called by the TV app to get a QR code to display.
